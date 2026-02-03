@@ -21,7 +21,7 @@
             android:value="YOUR_API_KEY" />
 
         <activity
-            android:name=".MainActivity"
+            android:name=".LoginActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Project_school_ver1">
@@ -30,6 +30,30 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Project_school_ver1">
+        </activity>
+        <activity
+            android:name=".EditAnnouncementActivity"
+            android:exported="false"
+            android:label="Edit Announcement"
+            android:theme="@style/Theme.Project_school_ver1">
+        </activity>
+        <activity
+            android:name=".EditCourseActivity"
+            android:exported="false"
+            android:label="Edit Course"
+            android:theme="@style/Theme.Project_school_ver1">
+        </activity>
+        <activity
+            android:name=".EditUserActivity"
+            android:exported="false"
+            android:label="Edit User"
+            android:theme="@style/Theme.Project_school_ver1">
         </activity>
     </application>
 
