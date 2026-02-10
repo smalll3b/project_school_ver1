@@ -465,13 +465,13 @@ fun CampusAppMainScreen() {
                 HomeScreen()
             }
             composable(Screen.CampusMap.route) {
-                Text(text = "Campus Map Screen", modifier = Modifier.padding(16.dp))
+                CampusMapScreen()
             }
             composable(Screen.Esents.route) {
-                Text(text = "Esents Screen", modifier = Modifier.padding(16.dp))
+                EsentsScreen()
             }
             composable(Screen.News.route) {
-                Text(text = "News Screen", modifier = Modifier.padding(16.dp))
+                NewsScreen()
             }
         }
     }
