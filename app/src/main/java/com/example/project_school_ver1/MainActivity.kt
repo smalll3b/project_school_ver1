@@ -160,9 +160,13 @@ fun AnnouncementManagementScreen() {
         topBar = {
             TopAppBar(
                 title = { Text("Manage Announcements") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF2196F3),
+                    titleContentColor = Color.White
+                ),
                 actions = {
                     IconButton(onClick = { announcements.add(Announcement(announcements.size + 1, "New Announcement", "")) }) {
-                        Icon(Icons.Filled.Add, contentDescription = "Add Announcement")
+                        Icon(Icons.Filled.Add, contentDescription = "Add Announcement", tint = Color.White)
                     }
                 }
             )
@@ -243,9 +247,13 @@ fun CourseManagementScreen() {
         topBar = {
             TopAppBar(
                 title = { Text("Manage Courses") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF2196F3),
+                    titleContentColor = Color.White
+                ),
                 actions = {
                     IconButton(onClick = { courses.add(Course(courses.size + 1, "New Course", "")) }) {
-                        Icon(Icons.Filled.Add, contentDescription = "Add Course")
+                        Icon(Icons.Filled.Add, contentDescription = "Add Course", tint = Color.White)
                     }
                 }
             )
@@ -327,9 +335,13 @@ fun UserManagementScreen() {
         topBar = {
             TopAppBar(
                 title = { Text("Manage Users") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF2196F3),
+                    titleContentColor = Color.White
+                ),
                 actions = {
                     IconButton(onClick = { users.add(User(users.size + 1, "New User", "")) }) {
-                        Icon(Icons.Filled.Add, contentDescription = "Add User")
+                        Icon(Icons.Filled.Add, contentDescription = "Add User", tint = Color.White)
                     }
                 }
             )
@@ -386,7 +398,13 @@ fun NotificationManagementScreen() {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Send Notification") })
+            TopAppBar(
+                title = { Text("Send Notification") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF2196F3),
+                    titleContentColor = Color.White
+                )
+            )
         }
     ) { paddingValues ->
         Column(
