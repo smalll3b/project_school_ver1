@@ -15,7 +15,7 @@ import com.example.project_school_ver1.ui.theme.Project_school_ver1Theme
 class EditAnnouncementActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val announcementId = intent.getIntExtra("ANNOUNCEMENT_ID", -1)
+        val announcementId = intent.getStringExtra("ANNOUNCEMENT_ID") ?: ""
         val announcementTitle = intent.getStringExtra("ANNOUNCEMENT_TITLE") ?: ""
         val announcementContent = intent.getStringExtra("ANNOUNCEMENT_CONTENT") ?: ""
 
@@ -32,14 +32,12 @@ class EditAnnouncementActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditAnnouncementScreen(id: Int, title: String, content: String, onSave: (Intent) -> Unit) {
+fun EditAnnouncementScreen(id: String, title: String, content: String, onSave: (Intent) -> Unit) {
     var currentTitle by remember { mutableStateOf(title) }
     var currentContent by remember { mutableStateOf(content) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Edit Announcement") })
-        }
+        topBar = { TopAppBar(title = { Text("Edit Announcement") }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -57,7 +55,9 @@ fun EditAnnouncementScreen(id: Int, title: String, content: String, onSave: (Int
                 value = currentContent,
                 onValueChange = { currentContent = it },
                 label = { Text("Content") },
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(

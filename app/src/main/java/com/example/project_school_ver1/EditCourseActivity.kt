@@ -15,7 +15,7 @@ import com.example.project_school_ver1.ui.theme.Project_school_ver1Theme
 class EditCourseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val courseId = intent.getIntExtra("COURSE_ID", -1)
+        val courseId = intent.getStringExtra("COURSE_ID") ?: ""
         val courseName = intent.getStringExtra("COURSE_NAME") ?: ""
         val courseTime = intent.getStringExtra("COURSE_TIME") ?: ""
 
@@ -32,14 +32,12 @@ class EditCourseActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditCourseScreen(id: Int, name: String, time: String, onSave: (Intent) -> Unit) {
+fun EditCourseScreen(id: String, name: String, time: String, onSave: (Intent) -> Unit) {
     var currentName by remember { mutableStateOf(name) }
     var currentTime by remember { mutableStateOf(time) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Edit Course") })
-        }
+        topBar = { TopAppBar(title = { Text("Edit Course") }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier

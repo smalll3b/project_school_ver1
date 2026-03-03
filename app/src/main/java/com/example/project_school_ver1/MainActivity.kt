@@ -1,7 +1,6 @@
 package com.example.project_school_ver1
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -34,6 +33,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.project_school_ver1.ui.theme.Project_school_ver1Theme
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,9 +54,9 @@ class MainActivity : ComponentActivity() {
 }
 
 // Data classes
-data class Announcement(val id: Int, var title: String, var content: String)
-data class Course(val id: Int, var name: String, var time: String)
-data class User(val id: Int, var name: String, var role: String)
+data class Announcement(val id: String = "", var title: String = "", var content: String = "")
+data class Course(val id: String = "", var name: String = "", var time: String = "")
+data class User(val id: String = "", var name: String = "", var role: String = "")
 
 // Admin navigation
 sealed class AdminScreenRoute(val route: String, val title: String, val icon: ImageVector) {
@@ -115,9 +116,7 @@ fun AdminBottomNavigationBar(navController: NavHostController) {
                 selected = currentRoute == screen.route,
                 onClick = {
                     navController.navigate(screen.route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
-                        }
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -127,15 +126,35 @@ fun AdminBottomNavigationBar(navController: NavHostController) {
     }
 }
 
+// ─── Announcement Management ───────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnnouncementManagementScreen() {
     val context = LocalContext.current
-    val announcements = remember {
-        mutableStateListOf(
-            Announcement(1, "Announcement 1", "This is the first announcement."),
-            Announcement(2, "Announcement 2", "This is the second announcement.")
-        )
+    val db = FirebaseFirestore.getInstance()
+    val announcements = remember { mutableStateListOf<Announcement>() }
+    var isLoading by remember { mutableStateOf(true) }
+
+    // Real-time listener
+    DisposableEffect(Unit) {
+        val listener = db.collection("announcements")
+            .addSnapshotListener { snapshot, _ ->
+                isLoading = false
+                if (snapshot != null) {
+                    announcements.clear()
+                    snapshot.documents.forEach { doc ->
+                        announcements.add(
+                            Announcement(
+                                id = doc.id,
+                                title = doc.getString("title") ?: "",
+                                content = doc.getString("content") ?: ""
+                            )
+                        )
+                    }
+                }
+            }
+        onDispose { listener.remove() }
     }
 
     val editAnnouncementLauncher = rememberLauncherForActivityResult(
@@ -143,16 +162,14 @@ fun AnnouncementManagementScreen() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data = result.data
-            val id = data?.getIntExtra("ANNOUNCEMENT_ID", -1)
-            val title = data?.getStringExtra("ANNOUNCEMENT_TITLE")
-            val content = data?.getStringExtra("ANNOUNCEMENT_CONTENT")
-
-            if (id != -1 && title != null && content != null) {
-                val index = announcements.indexOfFirst { it.id == id }
-                if (index != -1) {
-                    announcements[index] = announcements[index].copy(title = title, content = content)
+            val id = data?.getStringExtra("ANNOUNCEMENT_ID") ?: return@rememberLauncherForActivityResult
+            val title = data.getStringExtra("ANNOUNCEMENT_TITLE") ?: return@rememberLauncherForActivityResult
+            val content = data.getStringExtra("ANNOUNCEMENT_CONTENT") ?: return@rememberLauncherForActivityResult
+            db.collection("announcements").document(id)
+                .update("title", title, "content", content)
+                .addOnFailureListener {
+                    Toast.makeText(context, "更新失敗", Toast.LENGTH_SHORT).show()
                 }
-            }
         }
     }
 
@@ -165,28 +182,48 @@ fun AnnouncementManagementScreen() {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    IconButton(onClick = { announcements.add(Announcement(announcements.size + 1, "New Announcement", "")) }) {
+                    IconButton(onClick = {
+                        db.collection("announcements").add(
+                            mapOf("title" to "New Announcement", "content" to "")
+                        )
+                    }) {
                         Icon(Icons.Filled.Add, contentDescription = "Add Announcement", tint = Color.White)
+                    }
+                    IconButton(onClick = {
+                        FirebaseAuth.getInstance().signOut()
+                        val intent = Intent(context, LoginActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        context.startActivity(intent)
+                    }) {
+                        Icon(Icons.Filled.ExitToApp, contentDescription = "Logout", tint = Color.White)
                     }
                 }
             )
         }
     ) { paddingValues ->
-        LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
-            items(announcements) { announcement ->
-                AnnouncementCard(
-                    announcement = announcement,
-                    onEdit = {
-                        val intent = Intent(context, EditAnnouncementActivity::class.java).apply {
-                            putExtra("ANNOUNCEMENT_ID", announcement.id)
-                            putExtra("ANNOUNCEMENT_TITLE", announcement.title)
-                            putExtra("ANNOUNCEMENT_CONTENT", announcement.content)
+        if (isLoading) {
+            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
+                items(announcements) { announcement ->
+                    AnnouncementCard(
+                        announcement = announcement,
+                        onEdit = {
+                            val intent = Intent(context, EditAnnouncementActivity::class.java).apply {
+                                putExtra("ANNOUNCEMENT_ID", announcement.id)
+                                putExtra("ANNOUNCEMENT_TITLE", announcement.title)
+                                putExtra("ANNOUNCEMENT_CONTENT", announcement.content)
+                            }
+                            editAnnouncementLauncher.launch(intent)
+                        },
+                        onDelete = {
+                            db.collection("announcements").document(announcement.id).delete()
                         }
-                        editAnnouncementLauncher.launch(intent)
-                    },
-                    onDelete = { announcements.remove(announcement) }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
@@ -203,26 +240,35 @@ fun AnnouncementCard(announcement: Announcement, onEdit: () -> Unit, onDelete: (
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = announcement.content)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Edit")
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                }
+                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit") }
+                IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
             }
         }
     }
 }
 
+// ─── Course Management ─────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseManagementScreen() {
     val context = LocalContext.current
-    val courses = remember {
-        mutableStateListOf(
-            Course(1, "History", "9:00 AM - 10:30 AM"),
-            Course(2, "Biology", "11:00 AM - 12:00 PM")
-        )
+    val db = FirebaseFirestore.getInstance()
+    val courses = remember { mutableStateListOf<Course>() }
+    var isLoading by remember { mutableStateOf(true) }
+
+    DisposableEffect(Unit) {
+        val listener = db.collection("courses")
+            .addSnapshotListener { snapshot, _ ->
+                isLoading = false
+                if (snapshot != null) {
+                    courses.clear()
+                    snapshot.documents.forEach { doc ->
+                        courses.add(Course(id = doc.id, name = doc.getString("name") ?: "", time = doc.getString("time") ?: ""))
+                    }
+                }
+            }
+        onDispose { listener.remove() }
     }
 
     val editCourseLauncher = rememberLauncherForActivityResult(
@@ -230,16 +276,11 @@ fun CourseManagementScreen() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data = result.data
-            val id = data?.getIntExtra("COURSE_ID", -1)
-            val name = data?.getStringExtra("COURSE_NAME")
-            val time = data?.getStringExtra("COURSE_TIME")
-
-            if (id != -1 && name != null && time != null) {
-                val index = courses.indexOfFirst { it.id == id }
-                if (index != -1) {
-                    courses[index] = courses[index].copy(name = name, time = time)
-                }
-            }
+            val id = data?.getStringExtra("COURSE_ID") ?: return@rememberLauncherForActivityResult
+            val name = data.getStringExtra("COURSE_NAME") ?: return@rememberLauncherForActivityResult
+            val time = data.getStringExtra("COURSE_TIME") ?: return@rememberLauncherForActivityResult
+            db.collection("courses").document(id).update("name", name, "time", time)
+                .addOnFailureListener { Toast.makeText(context, "更新失敗", Toast.LENGTH_SHORT).show() }
         }
     }
 
@@ -252,28 +293,36 @@ fun CourseManagementScreen() {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    IconButton(onClick = { courses.add(Course(courses.size + 1, "New Course", "")) }) {
+                    IconButton(onClick = {
+                        db.collection("courses").add(mapOf("name" to "New Course", "time" to ""))
+                    }) {
                         Icon(Icons.Filled.Add, contentDescription = "Add Course", tint = Color.White)
                     }
                 }
             )
         }
     ) { paddingValues ->
-        LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
-            items(courses) { course ->
-                CourseCard(
-                    course = course,
-                    onEdit = {
-                        val intent = Intent(context, EditCourseActivity::class.java).apply {
-                            putExtra("COURSE_ID", course.id)
-                            putExtra("COURSE_NAME", course.name)
-                            putExtra("COURSE_TIME", course.time)
-                        }
-                        editCourseLauncher.launch(intent)
-                    },
-                    onDelete = { courses.remove(course) }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+        if (isLoading) {
+            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
+                items(courses) { course ->
+                    CourseCard(
+                        course = course,
+                        onEdit = {
+                            val intent = Intent(context, EditCourseActivity::class.java).apply {
+                                putExtra("COURSE_ID", course.id)
+                                putExtra("COURSE_NAME", course.name)
+                                putExtra("COURSE_TIME", course.time)
+                            }
+                            editCourseLauncher.launch(intent)
+                        },
+                        onDelete = { db.collection("courses").document(course.id).delete() }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
@@ -290,27 +339,35 @@ fun CourseCard(course: Course, onEdit: () -> Unit, onDelete: () -> Unit) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = course.time)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Edit")
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                }
+                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit") }
+                IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
             }
         }
     }
 }
 
+// ─── User Management ───────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserManagementScreen() {
     val context = LocalContext.current
-    val users = remember {
-        mutableStateListOf(
-            User(1, "Alice", "Student"),
-            User(2, "Bob", "Student"),
-            User(3, "Charlie", "Teacher")
-        )
+    val db = FirebaseFirestore.getInstance()
+    val users = remember { mutableStateListOf<User>() }
+    var isLoading by remember { mutableStateOf(true) }
+
+    DisposableEffect(Unit) {
+        val listener = db.collection("users")
+            .addSnapshotListener { snapshot, _ ->
+                isLoading = false
+                if (snapshot != null) {
+                    users.clear()
+                    snapshot.documents.forEach { doc ->
+                        users.add(User(id = doc.id, name = doc.getString("name") ?: "", role = doc.getString("role") ?: ""))
+                    }
+                }
+            }
+        onDispose { listener.remove() }
     }
 
     val editUserLauncher = rememberLauncherForActivityResult(
@@ -318,16 +375,11 @@ fun UserManagementScreen() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data = result.data
-            val id = data?.getIntExtra("USER_ID", -1)
-            val name = data?.getStringExtra("USER_NAME")
-            val role = data?.getStringExtra("USER_ROLE")
-
-            if (id != -1 && name != null && role != null) {
-                val index = users.indexOfFirst { it.id == id }
-                if (index != -1) {
-                    users[index] = users[index].copy(name = name, role = role)
-                }
-            }
+            val id = data?.getStringExtra("USER_ID") ?: return@rememberLauncherForActivityResult
+            val name = data.getStringExtra("USER_NAME") ?: return@rememberLauncherForActivityResult
+            val role = data.getStringExtra("USER_ROLE") ?: return@rememberLauncherForActivityResult
+            db.collection("users").document(id).update("name", name, "role", role)
+                .addOnFailureListener { Toast.makeText(context, "更新失敗", Toast.LENGTH_SHORT).show() }
         }
     }
 
@@ -338,30 +390,31 @@ fun UserManagementScreen() {
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF2196F3),
                     titleContentColor = Color.White
-                ),
-                actions = {
-                    IconButton(onClick = { users.add(User(users.size + 1, "New User", "")) }) {
-                        Icon(Icons.Filled.Add, contentDescription = "Add User", tint = Color.White)
-                    }
-                }
+                )
             )
         }
     ) { paddingValues ->
-        LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
-            items(users) { user ->
-                UserCard(
-                    user = user,
-                    onEdit = {
-                        val intent = Intent(context, EditUserActivity::class.java).apply {
-                            putExtra("USER_ID", user.id)
-                            putExtra("USER_NAME", user.name)
-                            putExtra("USER_ROLE", user.role)
-                        }
-                        editUserLauncher.launch(intent)
-                    },
-                    onDelete = { users.remove(user) }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+        if (isLoading) {
+            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
+                items(users) { user ->
+                    UserCard(
+                        user = user,
+                        onEdit = {
+                            val intent = Intent(context, EditUserActivity::class.java).apply {
+                                putExtra("USER_ID", user.id)
+                                putExtra("USER_NAME", user.name)
+                                putExtra("USER_ROLE", user.role)
+                            }
+                            editUserLauncher.launch(intent)
+                        },
+                        onDelete = { db.collection("users").document(user.id).delete() }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
@@ -378,16 +431,14 @@ fun UserCard(user: User, onEdit: () -> Unit, onDelete: () -> Unit) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = user.role)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Edit")
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                }
+                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit") }
+                IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
             }
         }
     }
 }
+
+// ─── Notification Management ───────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -395,6 +446,7 @@ fun NotificationManagementScreen() {
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val db = FirebaseFirestore.getInstance()
 
     Scaffold(
         topBar = {
@@ -423,13 +475,30 @@ fun NotificationManagementScreen() {
                 value = content,
                 onValueChange = { content = it },
                 label = { Text("Content") },
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    // Simulate sending a notification
-                    Toast.makeText(context, "Notification sent: $title", Toast.LENGTH_SHORT).show()
+                    if (title.isBlank()) {
+                        Toast.makeText(context, "請輸入標題", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    db.collection("notifications").add(
+                        mapOf(
+                            "title" to title,
+                            "content" to content,
+                            "timestamp" to com.google.firebase.Timestamp.now()
+                        )
+                    ).addOnSuccessListener {
+                        Toast.makeText(context, "通知已發送：$title", Toast.LENGTH_SHORT).show()
+                        title = ""
+                        content = ""
+                    }.addOnFailureListener {
+                        Toast.makeText(context, "發送失敗", Toast.LENGTH_SHORT).show()
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -439,11 +508,12 @@ fun NotificationManagementScreen() {
     }
 }
 
+// ─── Student Navigation ────────────────────────────────────────────────────
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Classes : Screen("classes", "Classes", Icons.Filled.DateRange)
     object CampusMap : Screen("campus_map", "Campus Map", Icons.Filled.LocationOn)
-    object Esents : Screen("esents", "Esents", Icons.Filled.Info)
+    object Esents : Screen("esents", "Events", Icons.Filled.Info)
     object News : Screen("news", "News", Icons.AutoMirrored.Filled.List)
 }
 
@@ -458,6 +528,7 @@ val navigationItems = listOf(
 @Composable
 fun CampusAppMainScreen() {
     val navController = rememberNavController()
+    val context = LocalContext.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -467,7 +538,17 @@ fun CampusAppMainScreen() {
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF2196F3),
                     titleContentColor = Color.White
-                )
+                ),
+                actions = {
+                    IconButton(onClick = {
+                        FirebaseAuth.getInstance().signOut()
+                        val intent = Intent(context, LoginActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        context.startActivity(intent)
+                    }) {
+                        Icon(Icons.Filled.ExitToApp, contentDescription = "Logout", tint = Color.White)
+                    }
+                }
             )
         },
         bottomBar = {
@@ -479,21 +560,15 @@ fun CampusAppMainScreen() {
             startDestination = Screen.Classes.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Classes.route) {
-                HomeScreen()
-            }
-            composable(Screen.CampusMap.route) {
-                CampusMapScreen()
-            }
-            composable(Screen.Esents.route) {
-                EsentsScreen()
-            }
-            composable(Screen.News.route) {
-                NewsScreen()
-            }
+            composable(Screen.Classes.route) { HomeScreen() }
+            composable(Screen.CampusMap.route) { CampusMapScreen() }
+            composable(Screen.Esents.route) { EsentsScreen() }
+            composable(Screen.News.route) { NewsScreen() }
         }
     }
 }
+
+// ─── Student Home ──────────────────────────────────────────────────────────
 
 @Composable
 fun HomeScreen() {
@@ -511,56 +586,70 @@ fun HomeScreen() {
 
 @Composable
 fun TodayClassesCard() {
+    val db = FirebaseFirestore.getInstance()
+    val courses = remember { mutableStateListOf<Course>() }
+
+    DisposableEffect(Unit) {
+        val listener = db.collection("courses").addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                courses.clear()
+                snapshot.documents.forEach { doc ->
+                    courses.add(Course(id = doc.id, name = doc.getString("name") ?: "", time = doc.getString("time") ?: ""))
+                }
+            }
+        }
+        onDispose { listener.remove() }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Today's Classes",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            Text(
-                text = "History - 9:00 AM – 10:30 AM",
-                color = Color(0xFF555555),
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Text(
-                text = "Biology - 11:00 AM – 12:00 PM",
-                color = Color(0xFF555555),
-                modifier = Modifier.padding(top = 4.dp)
-            )
+            Text(text = "Today's Classes", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            if (courses.isEmpty()) {
+                Text(text = "No classes today.", color = Color(0xFF555555), modifier = Modifier.padding(top = 8.dp))
+            } else {
+                courses.forEach { course ->
+                    Text(text = "${course.name} - ${course.time}", color = Color(0xFF555555), modifier = Modifier.padding(top = 4.dp))
+                }
+            }
         }
     }
 }
 
 @Composable
 fun AnnouncementsCard() {
+    val db = FirebaseFirestore.getInstance()
+    val announcements = remember { mutableStateListOf<Announcement>() }
+
+    DisposableEffect(Unit) {
+        val listener = db.collection("announcements").addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                announcements.clear()
+                snapshot.documents.forEach { doc ->
+                    announcements.add(Announcement(id = doc.id, title = doc.getString("title") ?: "", content = doc.getString("content") ?: ""))
+                }
+            }
+        }
+        onDispose { listener.remove() }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Announcements",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            Text(
-                text = "Announcement: Lorem ipsum dolor sit amet",
-                color = Color(0xFF555555),
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Text(
-                text = "Announcement: Lorem ipsum dolor sit amet",
-                color = Color(0xFF555555),
-                modifier = Modifier.padding(top = 4.dp)
-            )
+            Text(text = "Announcements", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            if (announcements.isEmpty()) {
+                Text(text = "No announcements.", color = Color(0xFF555555), modifier = Modifier.padding(top = 8.dp))
+            } else {
+                announcements.take(3).forEach { item ->
+                    Text(text = item.title, color = Color(0xFF555555), modifier = Modifier.padding(top = 4.dp))
+                }
+            }
         }
     }
 }
@@ -578,9 +667,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                 selected = currentRoute == screen.route,
                 onClick = {
                     navController.navigate(screen.route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
-                        }
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
                     }

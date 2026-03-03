@@ -15,7 +15,7 @@ import com.example.project_school_ver1.ui.theme.Project_school_ver1Theme
 class EditUserActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val userId = intent.getIntExtra("USER_ID", -1)
+        val userId = intent.getStringExtra("USER_ID") ?: ""
         val userName = intent.getStringExtra("USER_NAME") ?: ""
         val userRole = intent.getStringExtra("USER_ROLE") ?: ""
 
@@ -32,14 +32,12 @@ class EditUserActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditUserScreen(id: Int, name: String, role: String, onSave: (Intent) -> Unit) {
+fun EditUserScreen(id: String, name: String, role: String, onSave: (Intent) -> Unit) {
     var currentName by remember { mutableStateOf(name) }
     var currentRole by remember { mutableStateOf(role) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Edit User") })
-        }
+        topBar = { TopAppBar(title = { Text("Edit User") }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
