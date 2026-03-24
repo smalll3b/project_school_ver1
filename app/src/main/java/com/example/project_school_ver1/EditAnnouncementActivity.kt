@@ -1,6 +1,7 @@
 package com.example.project_school_ver1
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,10 +10,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.project_school_ver1.ui.theme.Project_school_ver1Theme
 
 class EditAnnouncementActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val announcementId = intent.getStringExtra("ANNOUNCEMENT_ID") ?: ""
@@ -37,7 +43,7 @@ fun EditAnnouncementScreen(id: String, title: String, content: String, onSave: (
     var currentContent by remember { mutableStateOf(content) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Edit Announcement") }) }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.edit_announcement)) }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -47,14 +53,14 @@ fun EditAnnouncementScreen(id: String, title: String, content: String, onSave: (
             OutlinedTextField(
                 value = currentTitle,
                 onValueChange = { currentTitle = it },
-                label = { Text("Title") },
+                label = { Text(stringResource(R.string.title_label)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = currentContent,
                 onValueChange = { currentContent = it },
-                label = { Text("Content") },
+                label = { Text(stringResource(R.string.content_label)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -71,7 +77,7 @@ fun EditAnnouncementScreen(id: String, title: String, content: String, onSave: (
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         }
     }

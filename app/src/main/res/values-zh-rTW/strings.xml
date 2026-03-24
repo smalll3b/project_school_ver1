@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">校園 App</string>
+
+    <string name="language_label">語言</string>
+    <string name="language_english">英文</string>
+    <string name="language_chinese">繁體中文</string>
+
+    <string name="login_title">校園 App</string>
+    <string name="login">登入</string>
+    <string name="register">建立帳號</string>
+    <string name="email">Email</string>
+    <string name="password">密碼</string>
+    <string name="admin_login">管理員登入</string>
+    <string name="admin_password">管理員密碼</string>
+    <string name="enter_admin_password">請輸入管理員密碼</string>
+    <string name="confirm">確認</string>
+    <string name="cancel">取消</string>
+    <string name="incorrect_password">密碼錯誤，請重試</string>
+    <string name="enter_email_and_password">請輸入 Email 和密碼</string>
+    <string name="register_failed">註冊失敗</string>
+    <string name="login_failed">登入失敗，請檢查帳號密碼</string>
+    <string name="already_have_account">已有帳號？返回登入</string>
+    <string name="no_account_register">還沒有帳號？立即註冊</string>
+
+    <string name="go_to_messages">前往留言</string>
+    <string name="view_messages">查看留言</string>
+    <string name="no_news_yet">目前沒有 News。</string>
+    <string name="no_messages_yet">目前沒有留言</string>
+    <string name="message_hint_from_news">可從 News 頁面的「前往留言」新增留言。</string>
+
+    <string name="leave_message">留言</string>
+    <string name="message">留言</string>
+    <string name="optional_title">標題 (可選)</string>
+    <string name="message_content">留言內容</string>
+    <string name="submit_message">送出留言</string>
+    <string name="message_content_required">請輸入留言內容</string>
+    <string name="message_sent">留言已送出</string>
+    <string name="message_send_failed">留言失敗</string>
+
+    <string name="logout">登出</string>
+    <string name="update_failed">更新失敗</string>
+    <string name="news_title_required">請輸入 News 標題</string>
+    <string name="news_added">News 已新增</string>
+    <string name="add_failed">新增失敗</string>
+    <string name="notification_title_required">請輸入標題</string>
+    <string name="notification_sent">通知已發送：%1$s</string>
+    <string name="notification_send_failed">發送失敗</string>
+
+    <string name="edit_announcement">編輯公告</string>
+    <string name="edit_course">編輯課程</string>
+    <string name="edit_user">編輯使用者</string>
+    <string name="title_label">標題</string>
+    <string name="content_label">內容</string>
+    <string name="course_name">課程名稱</string>
+    <string name="course_time">課程時間</string>
+    <string name="user_name">使用者名稱</string>
+    <string name="user_role">使用者角色</string>
+    <string name="save">儲存</string>
+
+    <string name="nav_announcements">公告</string>
+    <string name="nav_courses">課程</string>
+    <string name="nav_users">使用者</string>
+    <string name="nav_news">News</string>
+    <string name="nav_notifications">通知</string>
+    <string name="nav_classes">課表</string>
+    <string name="nav_campus_map">校園地圖</string>
+    <string name="nav_events">活動</string>
+    <string name="nav_leave_message">留言</string>
+    <string name="nav_messages">留言列表</string>
+
+    <string name="manage_announcements">管理公告</string>
+    <string name="manage_courses">管理課程</string>
+    <string name="manage_users">管理使用者</string>
+    <string name="manage_news">管理 News</string>
+    <string name="send_notification">發送通知</string>
+    <string name="news_title">News 標題</string>
+    <string name="news_content">News 內容</string>
+    <string name="add_news">新增 News</string>
+    <string name="no_news_admin">目前沒有 News。</string>
+
+    <string name="campus_app">校園 App</string>
+    <string name="todays_classes">今日課表</string>
+    <string name="no_classes_today">今天沒有課程。</string>
+    <string name="announcements_title">公告</string>
+    <string name="no_announcements">目前沒有公告。</string>
+</resources>

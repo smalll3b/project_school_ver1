@@ -1,6 +1,7 @@
 package com.example.project_school_ver1
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,10 +10,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.project_school_ver1.ui.theme.Project_school_ver1Theme
 
 class EditUserActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val userId = intent.getStringExtra("USER_ID") ?: ""
@@ -37,7 +43,7 @@ fun EditUserScreen(id: String, name: String, role: String, onSave: (Intent) -> U
     var currentRole by remember { mutableStateOf(role) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Edit User") }) }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.edit_user)) }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -47,14 +53,14 @@ fun EditUserScreen(id: String, name: String, role: String, onSave: (Intent) -> U
             OutlinedTextField(
                 value = currentName,
                 onValueChange = { currentName = it },
-                label = { Text("User Name") },
+                label = { Text(stringResource(R.string.user_name)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = currentRole,
                 onValueChange = { currentRole = it },
-                label = { Text("User Role") },
+                label = { Text(stringResource(R.string.user_role)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -69,7 +75,7 @@ fun EditUserScreen(id: String, name: String, role: String, onSave: (Intent) -> U
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         }
     }
