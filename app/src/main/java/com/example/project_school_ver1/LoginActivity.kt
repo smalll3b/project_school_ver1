@@ -6,8 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,9 +21,6 @@ import androidx.compose.ui.unit.sp
 import com.example.project_school_ver1.ui.theme.Project_school_ver1Theme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-
-// ── 管理員密碼（可自行修改）──────────────────────────────
-private const val ADMIN_SECRET = "admin1234"
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,60 +70,6 @@ fun LoginScreen() {
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isRegisterMode by remember { mutableStateOf(false) }
-
-    // 管理員密碼 dialog
-    var showAdminDialog by remember { mutableStateOf(false) }
-    var adminCode by remember { mutableStateOf("") }
-    var adminCodeError by remember { mutableStateOf("") }
-
-    // 管理員密碼驗證 dialog
-    if (showAdminDialog) {
-        AlertDialog(
-            onDismissRequest = { showAdminDialog = false; adminCode = ""; adminCodeError = "" },
-            icon = { Icon(Icons.Filled.AdminPanelSettings, contentDescription = null, tint = Color(0xFF2196F3)) },
-            title = { Text("管理員登入") },
-            text = {
-                Column {
-                    Text("請輸入管理員密碼", fontSize = 14.sp, modifier = Modifier.padding(bottom = 12.dp))
-                    OutlinedTextField(
-                        value = adminCode,
-                        onValueChange = { adminCode = it; adminCodeError = "" },
-                        label = { Text("管理員密碼") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        isError = adminCodeError.isNotEmpty()
-                    )
-                    if (adminCodeError.isNotEmpty()) {
-                        Text(adminCodeError, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-                    }
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (adminCode == ADMIN_SECRET) {
-                        showAdminDialog = false
-                        adminCode = ""
-                        val intent = Intent(context, MainActivity::class.java).apply {
-                            putExtra("USER_TYPE", "ADMIN")
-                        }
-                        context.startActivity(intent)
-                        (context as? LoginActivity)?.finish()
-                    } else {
-                        adminCodeError = "密碼錯誤，請重試"
-                    }
-                }) {
-                    Text("確認")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAdminDialog = false; adminCode = ""; adminCodeError = "" }) {
-                    Text("取消")
-                }
-            }
-        )
-    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -246,23 +187,6 @@ fun LoginScreen() {
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(onClick = { isRegisterMode = !isRegisterMode; errorMessage = "" }) {
                     Text(if (isRegisterMode) "已有帳號？返回登入" else "還沒有帳號？立即註冊")
-                }
-
-                // ── 管理員入口 ──────────────────────────────────────
-                Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = { showAdminDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        Icons.Filled.AdminPanelSettings,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("管理員登入")
                 }
             }
         }

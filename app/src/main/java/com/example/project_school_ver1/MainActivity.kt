@@ -57,11 +57,13 @@ class MainActivity : ComponentActivity() {
 data class Announcement(val id: String = "", var title: String = "", var content: String = "")
 data class Course(val id: String = "", var name: String = "", var time: String = "")
 data class User(val id: String = "", var name: String = "", var role: String = "")
+data class Event(val id: String = "", var title: String = "", var date: String = "")
 
 // Admin navigation
 sealed class AdminScreenRoute(val route: String, val title: String, val icon: ImageVector) {
     object Announcements : AdminScreenRoute("announcements", "Announcements", Icons.Filled.Campaign)
     object Courses : AdminScreenRoute("courses", "Courses", Icons.Filled.Book)
+    object Events : AdminScreenRoute("events", "Events", Icons.Filled.Event)
     object Users : AdminScreenRoute("users", "Users", Icons.Filled.People)
     object Notifications : AdminScreenRoute("notifications", "Notifications", Icons.Filled.Notifications)
 }
@@ -69,6 +71,7 @@ sealed class AdminScreenRoute(val route: String, val title: String, val icon: Im
 val adminNavigationItems = listOf(
     AdminScreenRoute.Announcements,
     AdminScreenRoute.Courses,
+    AdminScreenRoute.Events,
     AdminScreenRoute.Users,
     AdminScreenRoute.Notifications
 )
@@ -92,6 +95,9 @@ fun AdminScreen() {
             }
             composable(AdminScreenRoute.Courses.route) {
                 CourseManagementScreen()
+            }
+            composable(AdminScreenRoute.Events.route) {
+                EventManagementScreen()
             }
             composable(AdminScreenRoute.Users.route) {
                 UserManagementScreen()
@@ -682,5 +688,157 @@ fun BottomNavigationBar(navController: NavHostController) {
 fun CampusAppMainScreenPreview() {
     Project_school_ver1Theme {
         CampusAppMainScreen()
+    }
+}
+
+// ─── Event Management ─────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EventManagementScreen() {
+    val context = LocalContext.current
+    val db = FirebaseFirestore.getInstance()
+    val events = remember { mutableStateListOf<Event>() }
+    var isLoading by remember { mutableStateOf(true) }
+
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingEventId by remember { mutableStateOf("") }
+    var editingTitle by remember { mutableStateOf("") }
+    var editingDate by remember { mutableStateOf("") }
+
+    DisposableEffect(Unit) {
+        val listener = db.collection("events").addSnapshotListener { snapshot, _ ->
+            isLoading = false
+            if (snapshot != null) {
+                events.clear()
+                snapshot.documents.forEach { doc ->
+                    events.add(
+                        Event(
+                            id = doc.id,
+                            title = doc.getString("title") ?: "",
+                            date = doc.getString("date") ?: ""
+                        )
+                    )
+                }
+            }
+        }
+        onDispose { listener.remove() }
+    }
+
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text(if (editingEventId.isEmpty()) "Add Event" else "Edit Event") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = editingTitle,
+                        onValueChange = { editingTitle = it },
+                        label = { Text("Title") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editingDate,
+                        onValueChange = { editingDate = it },
+                        label = { Text("Date") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (editingTitle.isBlank() || editingDate.isBlank()) {
+                        Toast.makeText(context, "請填寫完整資料", Toast.LENGTH_SHORT).show()
+                        return@TextButton
+                    }
+
+                    val payload = mapOf("title" to editingTitle.trim(), "date" to editingDate.trim())
+                    if (editingEventId.isEmpty()) {
+                        db.collection("events").add(payload)
+                            .addOnSuccessListener { showEditDialog = false }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "儲存失敗", Toast.LENGTH_SHORT).show()
+                            }
+                    } else {
+                        db.collection("events").document(editingEventId).set(payload)
+                            .addOnSuccessListener { showEditDialog = false }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "儲存失敗", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Manage Events") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF2196F3),
+                    titleContentColor = Color.White
+                ),
+                actions = {
+                    IconButton(onClick = {
+                        editingEventId = ""
+                        editingTitle = ""
+                        editingDate = ""
+                        showEditDialog = true
+                    }) {
+                        Icon(Icons.Filled.Add, contentDescription = "Add Event", tint = Color.White)
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (isLoading) {
+            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
+                items(events) { event ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(text = event.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = event.date)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                IconButton(onClick = {
+                                    editingEventId = event.id
+                                    editingTitle = event.title
+                                    editingDate = event.date
+                                    showEditDialog = true
+                                }) {
+                                    Icon(Icons.Filled.Edit, contentDescription = "Edit")
+                                }
+                                IconButton(onClick = {
+                                    db.collection("events").document(event.id).delete()
+                                }) {
+                                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
     }
 }

@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 
-private const val CAMPUS_MAP_URL = "https://st.vtc.edu.hk/360tour/index_ch.html"
+private const val CAMPUS_MAP_URL = "http://st.vtc.edu.hk/360tour/index_ch.html"
 
 /**
  * A static map screen using an image, with clickable markers and buttons.
