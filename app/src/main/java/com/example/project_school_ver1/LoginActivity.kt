@@ -1,5 +1,6 @@
 package com.example.project_school_ver1
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -23,6 +25,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 class LoginActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // If already logged in, go directly to MainActivity
@@ -82,15 +88,23 @@ fun LoginScreen() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                LanguageSwitcherMenu { languageTag ->
+                    AppLanguage.setLanguage(context, languageTag)
+                }
+            }
             Text(
-                text = "校園 App",
+                text = stringResource(R.string.login_title),
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF2196F3),
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = if (isRegisterMode) "建立帳號" else "登入",
+                text = if (isRegisterMode) stringResource(R.string.register) else stringResource(R.string.login),
                 fontSize = 18.sp,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
@@ -98,7 +112,7 @@ fun LoginScreen() {
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email") },
+                label = { Text(stringResource(R.string.email)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -107,7 +121,7 @@ fun LoginScreen() {
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("密碼") },
+                label = { Text(stringResource(R.string.password)) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth(),
@@ -127,7 +141,7 @@ fun LoginScreen() {
                 Button(
                     onClick = {
                         if (email.isBlank() || password.isBlank()) {
-                            errorMessage = "請輸入 Email 和密碼"
+                            errorMessage = context.getString(R.string.enter_email_and_password)
                             return@Button
                         }
                         isLoading = true
@@ -149,7 +163,7 @@ fun LoginScreen() {
                                 }
                                 .addOnFailureListener { e ->
                                     isLoading = false
-                                    errorMessage = e.localizedMessage ?: "註冊失敗"
+                                    errorMessage = e.localizedMessage ?: context.getString(R.string.register_failed)
                                 }
                         } else {
                             auth.signInWithEmailAndPassword(email.trim(), password)
@@ -176,17 +190,23 @@ fun LoginScreen() {
                                 }
                                 .addOnFailureListener { e ->
                                     isLoading = false
-                                    errorMessage = e.localizedMessage ?: "登入失敗，請檢查帳號密碼"
+                                    errorMessage = e.localizedMessage ?: context.getString(R.string.login_failed)
                                 }
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (isRegisterMode) "建立帳號" else "登入")
+                    Text(if (isRegisterMode) stringResource(R.string.register) else stringResource(R.string.login))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(onClick = { isRegisterMode = !isRegisterMode; errorMessage = "" }) {
-                    Text(if (isRegisterMode) "已有帳號？返回登入" else "還沒有帳號？立即註冊")
+                    Text(
+                        if (isRegisterMode) {
+                            stringResource(R.string.already_have_account)
+                        } else {
+                            stringResource(R.string.no_account_register)
+                        }
+                    )
                 }
             }
         }

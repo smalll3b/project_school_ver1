@@ -1,6 +1,8 @@
 package com.example.project_school_ver1
 
+import android.graphics.Bitmap
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -8,7 +10,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.activity.result.contract.ActivityResultContracts.TakePicturePreview
+import androidx.annotation.StringRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,7 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -35,8 +44,15 @@ import androidx.navigation.compose.rememberNavController
 import com.example.project_school_ver1.ui.theme.Project_school_ver1Theme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import coil.compose.AsyncImage
+import java.util.Locale
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -57,15 +73,23 @@ class MainActivity : ComponentActivity() {
 data class Announcement(val id: String = "", var title: String = "", var content: String = "")
 data class Course(val id: String = "", var name: String = "", var time: String = "")
 data class User(val id: String = "", var name: String = "", var role: String = "")
-data class Event(val id: String = "", var title: String = "", var date: String = "")
+data class Event(
+    val id: String = "",
+    var title: String = "",
+    var date: String = "",
+    var imageUrl: String = "",
+    var posterText: String = "",
+    var expiryDate: String = "",
+    var posterStatus: String = ""
+)
 
 // Admin navigation
-sealed class AdminScreenRoute(val route: String, val title: String, val icon: ImageVector) {
-    object Announcements : AdminScreenRoute("announcements", "Announcements", Icons.Filled.Campaign)
-    object Courses : AdminScreenRoute("courses", "Courses", Icons.Filled.Book)
-    object Events : AdminScreenRoute("events", "Events", Icons.Filled.Event)
-    object Users : AdminScreenRoute("users", "Users", Icons.Filled.People)
-    object Notifications : AdminScreenRoute("notifications", "Notifications", Icons.Filled.Notifications)
+sealed class AdminScreenRoute(val route: String, @StringRes val titleRes: Int, val icon: ImageVector) {
+    object Announcements : AdminScreenRoute("announcements", R.string.nav_announcements, Icons.Filled.Campaign)
+    object Courses : AdminScreenRoute("courses", R.string.nav_courses, Icons.Filled.Book)
+    object Events : AdminScreenRoute("events", R.string.nav_events, Icons.Filled.Event)
+    object Users : AdminScreenRoute("users", R.string.nav_users, Icons.Filled.People)
+    object Notifications : AdminScreenRoute("notifications", R.string.nav_notifications, Icons.Filled.Notifications)
 }
 
 val adminNavigationItems = listOf(
@@ -116,9 +140,10 @@ fun AdminBottomNavigationBar(navController: NavHostController) {
 
     NavigationBar {
         adminNavigationItems.forEach { screen ->
+            val title = stringResource(screen.titleRes)
             NavigationBarItem(
-                icon = { Icon(screen.icon, contentDescription = screen.title) },
-                label = { Text(screen.title) },
+                icon = { Icon(screen.icon, contentDescription = title) },
+                label = { Text(title) },
                 selected = currentRoute == screen.route,
                 onClick = {
                     navController.navigate(screen.route) {
@@ -182,7 +207,7 @@ fun AnnouncementManagementScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Announcements") },
+                title = { Text(stringResource(R.string.manage_announcements)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF2196F3),
                     titleContentColor = Color.White
@@ -195,13 +220,16 @@ fun AnnouncementManagementScreen() {
                     }) {
                         Icon(Icons.Filled.Add, contentDescription = "Add Announcement", tint = Color.White)
                     }
+                    LanguageSwitcherMenu { languageTag ->
+                        AppLanguage.setLanguage(context, languageTag)
+                    }
                     IconButton(onClick = {
                         FirebaseAuth.getInstance().signOut()
                         val intent = Intent(context, LoginActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         context.startActivity(intent)
                     }) {
-                        Icon(Icons.Filled.ExitToApp, contentDescription = "Logout", tint = Color.White)
+                        Icon(Icons.Filled.ExitToApp, contentDescription = stringResource(R.string.logout), tint = Color.White)
                     }
                 }
             )
@@ -293,7 +321,7 @@ fun CourseManagementScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Courses") },
+                title = { Text(stringResource(R.string.manage_courses)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF2196F3),
                     titleContentColor = Color.White
@@ -303,6 +331,9 @@ fun CourseManagementScreen() {
                         db.collection("courses").add(mapOf("name" to "New Course", "time" to ""))
                     }) {
                         Icon(Icons.Filled.Add, contentDescription = "Add Course", tint = Color.White)
+                    }
+                    LanguageSwitcherMenu { languageTag ->
+                        AppLanguage.setLanguage(context, languageTag)
                     }
                 }
             )
@@ -392,11 +423,16 @@ fun UserManagementScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Users") },
+                title = { Text(stringResource(R.string.manage_users)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF2196F3),
                     titleContentColor = Color.White
-                )
+                ),
+                actions = {
+                    LanguageSwitcherMenu { languageTag ->
+                        AppLanguage.setLanguage(context, languageTag)
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -457,11 +493,16 @@ fun NotificationManagementScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Send Notification") },
+                title = { Text(stringResource(R.string.send_notification)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF2196F3),
                     titleContentColor = Color.White
-                )
+                ),
+                actions = {
+                    LanguageSwitcherMenu { languageTag ->
+                        AppLanguage.setLanguage(context, languageTag)
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -473,14 +514,14 @@ fun NotificationManagementScreen() {
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Title") },
+                label = { Text(stringResource(R.string.title_label)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = content,
                 onValueChange = { content = it },
-                label = { Text("Content") },
+                label = { Text(stringResource(R.string.content_label)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -489,7 +530,7 @@ fun NotificationManagementScreen() {
             Button(
                 onClick = {
                     if (title.isBlank()) {
-                        Toast.makeText(context, "請輸入標題", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.notification_title_required), Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     db.collection("notifications").add(
@@ -499,16 +540,16 @@ fun NotificationManagementScreen() {
                             "timestamp" to com.google.firebase.Timestamp.now()
                         )
                     ).addOnSuccessListener {
-                        Toast.makeText(context, "通知已發送：$title", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.notification_sent, title), Toast.LENGTH_SHORT).show()
                         title = ""
                         content = ""
                     }.addOnFailureListener {
-                        Toast.makeText(context, "發送失敗", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.notification_send_failed), Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Send")
+                Text(stringResource(R.string.send))
             }
         }
     }
@@ -516,11 +557,16 @@ fun NotificationManagementScreen() {
 
 // ─── Student Navigation ────────────────────────────────────────────────────
 
-sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
-    object Classes : Screen("classes", "Classes", Icons.Filled.DateRange)
-    object CampusMap : Screen("campus_map", "Campus Map", Icons.Filled.LocationOn)
-    object Esents : Screen("esents", "Events", Icons.Filled.Info)
-    object News : Screen("news", "News", Icons.AutoMirrored.Filled.List)
+sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: ImageVector) {
+    object Classes : Screen("classes", R.string.nav_classes, Icons.Filled.DateRange)
+    object CampusMap : Screen("campus_map", R.string.nav_campus_map, Icons.Filled.LocationOn)
+    object Esents : Screen("esents", R.string.nav_events, Icons.Filled.Info)
+    object News : Screen("news", R.string.nav_news, Icons.AutoMirrored.Filled.List)
+}
+
+private object StudentExtraRoute {
+    const val LeaveMessage = "leave_message"
+    const val MessageFeed = "message_feed"
 }
 
 val navigationItems = listOf(
@@ -540,19 +586,22 @@ fun CampusAppMainScreen() {
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Campus App") },
+                title = { Text(stringResource(R.string.campus_app)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF2196F3),
                     titleContentColor = Color.White
                 ),
                 actions = {
+                    LanguageSwitcherMenu { languageTag ->
+                        AppLanguage.setLanguage(context, languageTag)
+                    }
                     IconButton(onClick = {
                         FirebaseAuth.getInstance().signOut()
                         val intent = Intent(context, LoginActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         context.startActivity(intent)
                     }) {
-                        Icon(Icons.Filled.ExitToApp, contentDescription = "Logout", tint = Color.White)
+                        Icon(Icons.Filled.ExitToApp, contentDescription = stringResource(R.string.logout), tint = Color.White)
                     }
                 }
             )
@@ -569,9 +618,24 @@ fun CampusAppMainScreen() {
             composable(Screen.Classes.route) { HomeScreen() }
             composable(Screen.CampusMap.route) { CampusMapScreen() }
             composable(Screen.Esents.route) { EsentsScreen() }
-            composable(Screen.News.route) { NewsScreen() }
-        }
-    }
+            composable(Screen.News.route) {
+                NewsScreen(
+                    onGoToLeaveMessage = { navController.navigate(StudentExtraRoute.LeaveMessage) },
+                    onGoToMessageFeed = { navController.navigate(StudentExtraRoute.MessageFeed) }
+                )
+            }
+            composable(StudentExtraRoute.LeaveMessage) {
+                LeaveMessageScreen(
+                    onMessageSubmitted = {
+                        navController.navigate(StudentExtraRoute.MessageFeed) {
+                            popUpTo(StudentExtraRoute.LeaveMessage) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable(StudentExtraRoute.MessageFeed) { MessageFeedScreen() }
+         }
+     }
 }
 
 // ─── Student Home ──────────────────────────────────────────────────────────
@@ -613,9 +677,9 @@ fun TodayClassesCard() {
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Today's Classes", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Text(text = stringResource(R.string.todays_classes), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             if (courses.isEmpty()) {
-                Text(text = "No classes today.", color = Color(0xFF555555), modifier = Modifier.padding(top = 8.dp))
+                Text(text = stringResource(R.string.no_classes_today), color = Color(0xFF555555), modifier = Modifier.padding(top = 8.dp))
             } else {
                 courses.forEach { course ->
                     Text(text = "${course.name} - ${course.time}", color = Color(0xFF555555), modifier = Modifier.padding(top = 4.dp))
@@ -648,9 +712,9 @@ fun AnnouncementsCard() {
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "Announcements", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Text(text = stringResource(R.string.announcements_title), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             if (announcements.isEmpty()) {
-                Text(text = "No announcements.", color = Color(0xFF555555), modifier = Modifier.padding(top = 8.dp))
+                Text(text = stringResource(R.string.no_announcements), color = Color(0xFF555555), modifier = Modifier.padding(top = 8.dp))
             } else {
                 announcements.take(3).forEach { item ->
                     Text(text = item.title, color = Color(0xFF555555), modifier = Modifier.padding(top = 4.dp))
@@ -667,9 +731,10 @@ fun BottomNavigationBar(navController: NavHostController) {
 
     NavigationBar(containerColor = Color.White) {
         navigationItems.forEach { screen ->
+            val title = stringResource(screen.titleRes)
             NavigationBarItem(
-                icon = { Icon(screen.icon, contentDescription = screen.title) },
-                label = { Text(screen.title) },
+                icon = { Icon(screen.icon, contentDescription = title) },
+                label = { Text(title) },
                 selected = currentRoute == screen.route,
                 onClick = {
                     navController.navigate(screen.route) {
@@ -698,6 +763,7 @@ fun CampusAppMainScreenPreview() {
 fun EventManagementScreen() {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
+    val scope = rememberCoroutineScope()
     val events = remember { mutableStateListOf<Event>() }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -705,6 +771,71 @@ fun EventManagementScreen() {
     var editingEventId by remember { mutableStateOf("") }
     var editingTitle by remember { mutableStateOf("") }
     var editingDate by remember { mutableStateOf("") }
+    var editingImageUrl by remember { mutableStateOf("") }
+    var editingPosterText by remember { mutableStateOf("") }
+    var editingPosterStatus by remember { mutableStateOf("") }
+    var analysisMessage by remember { mutableStateOf("") }
+    var isAnalyzingPoster by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var selectedPosterBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    fun applyPosterAnalysis(result: EventPosterAnalysisResult) {
+        editingPosterText = result.recognizedText
+        editingPosterStatus = result.status.name.lowercase(Locale.US)
+        val inferredTitle = inferPosterTitle(result.recognizedText)
+        if (inferredTitle.isNotBlank() && editingTitle.isBlank()) {
+            editingTitle = inferredTitle
+        }
+        if (result.detectedDate != null) {
+            val detectedDate = formatPosterDate(result.detectedDate)
+            editingDate = detectedDate
+            analysisMessage = context.getString(
+                R.string.poster_analysis_success,
+                context.getString(result.status.labelRes),
+                detectedDate
+            )
+        } else {
+            analysisMessage = if (result.recognizedText.isNotBlank()) {
+                context.getString(R.string.poster_analysis_pending_review)
+            } else {
+                context.getString(R.string.poster_analysis_failed)
+            }
+        }
+    }
+
+    val galleryPosterLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val bitmap = loadBitmapFromUri(context, uri)
+        if (bitmap == null) {
+            analysisMessage = context.getString(R.string.poster_analysis_failed)
+            return@rememberLauncherForActivityResult
+        }
+        selectedPosterBitmap = bitmap
+        isAnalyzingPoster = true
+        analysisMessage = ""
+        scope.launch {
+            applyPosterAnalysis(analyzeEventPosterBitmap(bitmap))
+            isAnalyzingPoster = false
+        }
+    }
+
+    val cameraPosterLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap == null) {
+            analysisMessage = context.getString(R.string.poster_analysis_failed)
+            return@rememberLauncherForActivityResult
+        }
+        selectedPosterBitmap = bitmap
+        isAnalyzingPoster = true
+        analysisMessage = ""
+        scope.launch {
+            applyPosterAnalysis(analyzeEventPosterBitmap(bitmap))
+            isAnalyzingPoster = false
+        }
+    }
 
     DisposableEffect(Unit) {
         val listener = db.collection("events").addSnapshotListener { snapshot, _ ->
@@ -716,7 +847,11 @@ fun EventManagementScreen() {
                         Event(
                             id = doc.id,
                             title = doc.getString("title") ?: "",
-                            date = doc.getString("date") ?: ""
+                            date = doc.getString("date") ?: "",
+                            imageUrl = doc.getString("imageUrl") ?: "",
+                            posterText = doc.getString("posterText") ?: "",
+                            expiryDate = doc.getString("expiryDate") ?: "",
+                            posterStatus = doc.getString("posterStatus") ?: ""
                         )
                     )
                 }
@@ -727,7 +862,9 @@ fun EventManagementScreen() {
 
     if (showEditDialog) {
         AlertDialog(
-            onDismissRequest = { showEditDialog = false },
+            onDismissRequest = {
+                if (!isSaving) showEditDialog = false
+            },
             title = { Text(if (editingEventId.isEmpty()) "Add Event" else "Edit Event") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -745,35 +882,127 @@ fun EventManagementScreen() {
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
-                }
-            },
+                    OutlinedTextField(
+                        value = editingImageUrl,
+                        onValueChange = { editingImageUrl = it },
+                        label = { Text("Image URL") },
+                        placeholder = { Text("Paste a direct image URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    if (editingImageUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = editingImageUrl,
+                            contentDescription = "Event image preview",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                        )
+                    }
+                    selectedPosterBitmap?.let { bitmap ->
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Selected poster preview",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = {
+                                galleryPosterLauncher.launch(
+                                    PickVisualMediaRequest(PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.pick_poster_from_gallery))
+                        }
+                        Button(
+                            onClick = { cameraPosterLauncher.launch(null) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.capture_poster_photo))
+                        }
+                    }
+                     Button(
+                         onClick = {
+                             if (editingImageUrl.isBlank() || isAnalyzingPoster) return@Button
+                             isAnalyzingPoster = true
+                             analysisMessage = ""
+                             scope.launch {
+                                applyPosterAnalysis(analyzeEventPosterImage(editingImageUrl))
+                                 isAnalyzingPoster = false
+                             }
+                         },
+                         enabled = editingImageUrl.isNotBlank() && !isAnalyzingPoster,
+                         modifier = Modifier.fillMaxWidth()
+                     ) {
+                         Text(stringResource(R.string.analyze_poster))
+                     }
+                     if (isAnalyzingPoster) {
+                         CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                     }
+                     if (analysisMessage.isNotBlank()) {
+                         Text(text = analysisMessage)
+                     }
+                     if (editingPosterText.isNotBlank()) {
+                         Text(text = "${stringResource(R.string.poster_text)}: ${editingPosterText.take(120)}")
+                     }
+                     EventStatusBadge(
+                         status = resolveEventPosterStatus(editingPosterStatus, editingDate),
+                         modifier = Modifier.align(Alignment.Start)
+                     )
+                    if (isSaving) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    }
+                 }
+             },
             confirmButton = {
-                TextButton(onClick = {
-                    if (editingTitle.isBlank() || editingDate.isBlank()) {
-                        Toast.makeText(context, "請填寫完整資料", Toast.LENGTH_SHORT).show()
-                        return@TextButton
-                    }
+                TextButton(
+                    enabled = !isSaving,
+                    onClick = {
+                        if (editingTitle.isBlank() || editingDate.isBlank()) {
+                            Toast.makeText(context, "請填寫完整資料", Toast.LENGTH_SHORT).show()
+                            return@TextButton
+                        }
 
-                    val payload = mapOf("title" to editingTitle.trim(), "date" to editingDate.trim())
-                    if (editingEventId.isEmpty()) {
-                        db.collection("events").add(payload)
-                            .addOnSuccessListener { showEditDialog = false }
-                            .addOnFailureListener {
-                                Toast.makeText(context, "儲存失敗", Toast.LENGTH_SHORT).show()
+                        isSaving = true
+                        val eventId = if (editingEventId.isBlank()) {
+                            db.collection("events").document().id
+                        } else {
+                            editingEventId
+                        }
+
+                        val payload = mapOf(
+                            "title" to editingTitle.trim(),
+                            "date" to editingDate.trim(),
+                            "imageUrl" to editingImageUrl.trim(),
+                            "posterText" to editingPosterText.trim(),
+                            "expiryDate" to extractPosterDate(editingDate.trim())?.let(::formatPosterDate).orEmpty(),
+                            "posterStatus" to classifyEventPosterStatus(editingDate.trim()).name.lowercase(Locale.US)
+                        )
+
+                        db.collection("events").document(eventId).set(payload)
+                            .addOnSuccessListener {
+                                isSaving = false
+                                showEditDialog = false
                             }
-                    } else {
-                        db.collection("events").document(editingEventId).set(payload)
-                            .addOnSuccessListener { showEditDialog = false }
                             .addOnFailureListener {
+                                isSaving = false
                                 Toast.makeText(context, "儲存失敗", Toast.LENGTH_SHORT).show()
                             }
                     }
-                }) {
+                ) {
                     Text("Save")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) {
+                TextButton(
+                    enabled = !isSaving,
+                    onClick = { showEditDialog = false }
+                ) {
                     Text("Cancel")
                 }
             }
@@ -783,7 +1012,7 @@ fun EventManagementScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Events") },
+                title = { Text(stringResource(R.string.manage_events)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF2196F3),
                     titleContentColor = Color.White
@@ -793,9 +1022,17 @@ fun EventManagementScreen() {
                         editingEventId = ""
                         editingTitle = ""
                         editingDate = ""
+                        editingImageUrl = ""
+                        editingPosterText = ""
+                        editingPosterStatus = ""
+                        analysisMessage = ""
+                        selectedPosterBitmap = null
                         showEditDialog = true
                     }) {
                         Icon(Icons.Filled.Add, contentDescription = "Add Event", tint = Color.White)
+                    }
+                    LanguageSwitcherMenu { languageTag ->
+                        AppLanguage.setLanguage(context, languageTag)
                     }
                 }
             )
@@ -813,6 +1050,20 @@ fun EventManagementScreen() {
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
+                            if (event.imageUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = event.imageUrl,
+                                    contentDescription = event.title,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(140.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                            EventStatusBadge(
+                                status = resolveEventPosterStatus(event.posterStatus, event.expiryDate.ifBlank { event.date })
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(text = event.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(text = event.date)
@@ -824,6 +1075,11 @@ fun EventManagementScreen() {
                                     editingEventId = event.id
                                     editingTitle = event.title
                                     editingDate = event.date
+                                    editingImageUrl = event.imageUrl
+                                    editingPosterText = event.posterText
+                                    editingPosterStatus = event.posterStatus
+                                    analysisMessage = ""
+                                    selectedPosterBitmap = null
                                     showEditDialog = true
                                 }) {
                                     Icon(Icons.Filled.Edit, contentDescription = "Edit")

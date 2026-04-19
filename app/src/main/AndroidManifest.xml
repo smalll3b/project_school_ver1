@@ -13,6 +13,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Project_school_ver1"
@@ -42,19 +43,19 @@
         <activity
             android:name=".EditAnnouncementActivity"
             android:exported="false"
-            android:label="Edit Announcement"
+            android:label="@string/edit_announcement"
             android:theme="@style/Theme.Project_school_ver1">
         </activity>
         <activity
             android:name=".EditCourseActivity"
             android:exported="false"
-            android:label="Edit Course"
+            android:label="@string/edit_course"
             android:theme="@style/Theme.Project_school_ver1">
         </activity>
         <activity
             android:name=".EditUserActivity"
             android:exported="false"
-            android:label="Edit User"
+            android:label="@string/edit_user"
             android:theme="@style/Theme.Project_school_ver1">
         </activity>
     </application>

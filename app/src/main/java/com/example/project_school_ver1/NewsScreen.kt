@@ -1,5 +1,6 @@
 package com.example.project_school_ver1
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,13 +14,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,7 +38,15 @@ import com.google.firebase.firestore.Query
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-// Reuse NewsItem from MainActivity.kt.
+// Firestore model for news announcements displayed on the home feed.
+data class NewsItem(
+    val id: String,
+    val title: String,
+    val content: String,
+    val timestamp: Timestamp?
+)
+
+// Firestore model for user-submitted messages.
 data class MessageItem(
     val id: String,
     val title: String,
@@ -212,6 +227,77 @@ private fun MessageCard(item: MessageItem) {
                     color = Color(0xFF333333),
                     modifier = Modifier.padding(top = 8.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun LeaveMessageScreen(onMessageSubmitted: () -> Unit = {}) {
+    val db = FirebaseFirestore.getInstance()
+    val context = LocalContext.current
+
+    var title by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it },
+            label = { Text(stringResource(R.string.optional_title)) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isSaving
+        )
+
+        OutlinedTextField(
+            value = content,
+            onValueChange = { content = it },
+            label = { Text(stringResource(R.string.message_content)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp),
+            enabled = !isSaving
+        )
+
+        Button(
+            onClick = {
+                if (content.isBlank()) {
+                    Toast.makeText(context, context.getString(R.string.message_content_required), Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+
+                isSaving = true
+                val payload = mapOf(
+                    "title" to title.trim(),
+                    "content" to content.trim(),
+                    "createdAt" to Timestamp.now()
+                )
+
+                db.collection("messages")
+                    .add(payload)
+                    .addOnSuccessListener {
+                        isSaving = false
+                        Toast.makeText(context, context.getString(R.string.message_sent), Toast.LENGTH_SHORT).show()
+                        onMessageSubmitted()
+                    }
+                    .addOnFailureListener {
+                        isSaving = false
+                        Toast.makeText(context, context.getString(R.string.message_send_failed), Toast.LENGTH_SHORT).show()
+                    }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isSaving
+        ) {
+            if (isSaving) {
+                CircularProgressIndicator(modifier = Modifier.height(18.dp), strokeWidth = 2.dp)
+            } else {
+                Text(stringResource(R.string.submit_message))
             }
         }
     }
