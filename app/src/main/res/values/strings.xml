@@ -97,4 +97,29 @@
     <string name="no_classes_today">No classes today.</string>
     <string name="announcements_title">Announcements</string>
     <string name="no_announcements">No announcements.</string>
+
+    <!-- 校園地圖 OCR 辨識樓層所需的中立英文文案與樓層資訊字串 -->
+    <string name="map_ocr_title">Floor Recognition</string>
+    <string name="map_ocr_hint">Take a photo or choose one from gallery to detect floor text.</string>
+    <string name="capture_floor_photo">Take Floor Photo</string>
+    <string name="pick_floor_from_gallery">Pick from Gallery</string>
+    <string name="map_ocr_processing">Recognizing floor...</string>
+    <string name="map_detected_floor">Detected floor: %1$s - %2$s</string>
+    <string name="map_ocr_raw_text">OCR text: %1$s</string>
+    <string name="map_ocr_no_match">Floor not detected. Please retake with clearer text.</string>
+    <string name="map_ocr_failed">OCR failed. Please try again.</string>
+
+    <string name="floor_gf_title">Ground Floor</string>
+    <string name="floor_gf_desc">Main lobby, reception, and student service counters.</string>
+    <string name="floor_1f_title">First Floor</string>
+    <string name="floor_1f_desc">General classrooms and teacher consultation rooms.</string>
+    <string name="floor_2f_title">Second Floor</string>
+    <string name="floor_2f_desc">Computer labs and technical teaching spaces.</string>
+    <string name="floor_3f_title">Third Floor</string>
+    <string name="floor_3f_desc">Library, study area, and seminar rooms.</string>
+    <string name="floor_b1_title">Basement 1</string>
+    <string name="floor_b1_desc">Parking, utilities, and logistics access area.</string>
+
+    <string name="map_view_more">View More</string>
+    <string name="map_view_less">Show Less</string>
 </resources>

@@ -98,4 +98,28 @@
     <string name="no_classes_today">今天沒有課程。</string>
     <string name="announcements_title">公告</string>
     <string name="no_announcements">目前沒有公告。</string>
+
+    <string name="map_ocr_title">樓層辨識</string>
+    <string name="map_ocr_hint">拍照或從相簿選圖，辨識圖片中的樓層文字。</string>
+    <string name="capture_floor_photo">拍照辨識樓層</string>
+    <string name="pick_floor_from_gallery">從相簿選圖辨識</string>
+    <string name="map_ocr_processing">正在辨識樓層...</string>
+    <string name="map_detected_floor">辨識結果：%1$s - %2$s</string>
+    <string name="map_ocr_raw_text">OCR 文字：%1$s</string>
+    <string name="map_ocr_no_match">未能判斷樓層，請重新拍攝清晰文字。</string>
+    <string name="map_ocr_failed">樓層辨識失敗，請稍後再試。</string>
+
+    <string name="floor_gf_title">地下</string>
+    <string name="floor_gf_desc">主要大堂、接待處與學生服務櫃台。</string>
+    <string name="floor_1f_title">一樓</string>
+    <string name="floor_1f_desc">一般課室與教師諮詢室。</string>
+    <string name="floor_2f_title">二樓</string>
+    <string name="floor_2f_desc">電腦室與技術教學空間。</string>
+    <string name="floor_3f_title">三樓</string>
+    <string name="floor_3f_desc">圖書館、自習區與研討室。</string>
+    <string name="floor_b1_title">地庫一樓</string>
+    <string name="floor_b1_desc">停車、設備與後勤通道區域。</string>
+
+    <string name="map_view_more">查看更多</string>
+    <string name="map_view_less">收起資訊</string>
 </resources>
