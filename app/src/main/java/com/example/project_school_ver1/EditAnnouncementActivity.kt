@@ -6,6 +6,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,6 +51,7 @@ fun EditAnnouncementScreen(id: String, title: String, content: String, onSave: (
             modifier = Modifier
                 .padding(paddingValues)
                 .padding(16.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             OutlinedTextField(
                 value = currentTitle,
@@ -63,7 +66,7 @@ fun EditAnnouncementScreen(id: String, title: String, content: String, onSave: (
                 label = { Text(stringResource(R.string.content_label)) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .heightIn(min = 180.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(

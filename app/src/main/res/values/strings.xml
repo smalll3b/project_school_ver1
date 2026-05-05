@@ -117,6 +117,8 @@
     <string name="floor_2f_desc">Computer labs and technical teaching spaces.</string>
     <string name="floor_3f_title">Third Floor</string>
     <string name="floor_3f_desc">Library, study area, and seminar rooms.</string>
+    <string name="floor_4f_title">Fourth Floor</string>
+    <string name="floor_4f_desc">Advanced labs, innovation centers, and specialized departments.</string>
     <string name="floor_b1_title">Basement 1</string>
     <string name="floor_b1_desc">Parking, utilities, and logistics access area.</string>
 
